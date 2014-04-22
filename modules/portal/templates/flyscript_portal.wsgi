@@ -7,7 +7,7 @@
 import os
 import sys
  
-os.environ['DJANGO_SETTINGS_MODULE'] = 'project.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'project.settings.active'
 sys.path.append('/flyscript/flyscript_portal')
  
 import django.core.handlers.wsgi

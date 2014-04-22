@@ -6,20 +6,13 @@
 stage { 'first': before => Stage['main'] }
 
 class setup {
-    file {
-      "/root/.pip":
-        ensure => directory;
-
-      "/root/.pip/pip.conf":
-        content => template("portal/pip.conf"),
-        require => File["/root/.pip"],
-        recurse => true,
-        ensure => file;
-    }
-
     exec { "apt-update":
       command => "/usr/bin/sudo apt-get -y update",
-      require => File["/root/.pip/pip.conf"];
+    }
+
+    exec { "apt-upgrade":
+      #command => "/usr/bin/sudo export DEBIAN_FRONTEND=noninteractive  && /usr/bin/sudo apt-get -y upgrade",
+      command => '/usr/bin/sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade'
     }
 }
 class { "setup": stage => first }
@@ -28,15 +21,16 @@ class core {
     package { 
       [ "vim", "git-core", "build-essential" ]:
         ensure => installed,
-        require => Exec['apt-update'];
+        require => Exec['apt-update', 'apt-upgrade'];
     }
 }
 
 class python {
     package { 
       [ "python", "python-setuptools", "python-dev", "python-pip", "sqlite3", 
-        "python-matplotlib", "python-imaging", "python-numpy", "python-scipy",
-        "python-pandas", "ipython-notebook", "python-nose", "snmpd" ]:
+        "python-matplotlib", "python-imaging", "python-scipy",
+        "ipython-notebook", "python-nose", "snmpd", 
+        "libxml2-dev", "libxslt1-dev"]:
         ensure => installed;
     }
 
@@ -48,7 +42,6 @@ class python {
 
     package {
       ["ipython"]:
-      ensure => "0.13.1",
       provider => pip;
     }
 }
@@ -125,12 +118,39 @@ class flyscript_portal {
     }
 
     package {
-      # we need to update pandas past what is provided by Ubuntu packages
       "pandas":
-        ensure => "0.10.1",
+        ensure => "0.13.1",
         provider => pip,
-        require => Package['python-pip', 'python-pandas'];
+        require => Package['python-pip'];
     }
+
+    package {
+      "numpy":
+        ensure => "1.8.0",
+        provider => pip,
+        require => Package['python-pip'];
+    }
+
+    #    package {
+    #      "sharepoint":
+    #        ensure => ">=0.3.2,<=0.4",
+    #        provider => pip,
+    #        require => Package['python-pip'];
+    #    }
+    #
+    #    package {
+    #      "python-ntlm":
+    #        ensure => "1.0.1",
+    #        provider => pip,
+    #        require => Package['python-pip'];
+    #    }
+    #
+    #    package {
+    #      "lxml":
+    #        ensure => ">=3.3.0,<3.4.0",
+    #        provider => pip,
+    #        require => Package['python-pip'];
+    #    }
 
     file {
       "/flyscript":
@@ -157,6 +177,18 @@ class flyscript_portal {
         creates => '/flyscript/flyscript_portal/.git',
         require => Package[ "django", "djangorestframework", "markdown", "django-model-utils", 
         "pygeoip", "django-extensions" ],
+        subscribe => File["/flyscript/flyscript_portal"],
+        notify => [ Exec['portal_requirements'], 
+        ],
+        refreshonly => true;
+    }
+
+    exec {
+      'portal_requirements':
+        cwd => '/flyscript/flyscript_portal',
+        command => 'sudo pip install -r requirements.txt',
+        path => '/flyscript/flyscript_portal:/usr/local/bin:/usr/bin:/bin',
+        creates => '/flyscript/flyscript_portal/project/settings/active.py',
         notify => [ Exec['portal_setup'], 
         ],
         refreshonly => true;
@@ -165,9 +197,19 @@ class flyscript_portal {
     exec {
       'portal_setup':
         cwd => '/flyscript/flyscript_portal',
-        command => 'sudo python manage.py syncdb --noinput',
+        command => 'sudo ./bootstrap.py install',
         path => '/flyscript/flyscript_portal:/usr/local/bin:/usr/bin:/bin',
-        creates => '/flyscript/flyscript_portal/project.db',
+        creates => '/flyscript/flyscript_portal/project/settings/active.py',
+        notify => [ Exec['portal_init'], 
+        ],
+        refreshonly => true;
+    }
+
+    exec {
+      'portal_init':
+        cwd => '/flyscript/flyscript_portal',
+        command => 'sudo ./clean --reset --force',
+        path => '/flyscript/flyscript_portal:/usr/local/bin:/usr/bin:/bin',
         notify => [ Exec['portal_static_files'], 
         ],
         refreshonly => true;
@@ -179,16 +221,6 @@ class flyscript_portal {
         command => 'sudo python manage.py collectstatic --noinput',
         path => '/flyscript/flyscript_portal:/usr/local/bin:/usr/bin:/bin',
         creates => '/flyscript/flyscript_portal/static/bootstrap',
-        notify => [ Exec['portal_reload'], 
-        ],
-        refreshonly => true;
-    }
-
-    exec {
-      'portal_reload':
-        cwd => '/flyscript/flyscript_portal',
-        command => 'sudo python manage.py reload',
-        path => '/flyscript/flyscript_portal:/usr/local/bin:/usr/bin:/bin',
         notify => [ Exec['portal_permissions'], 
         ],
         refreshonly => true;
