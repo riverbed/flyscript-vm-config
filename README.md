@@ -11,7 +11,7 @@ Command-line Python Development Environment with FlyScript
 * [git](http://git-scm.com/downloads)
 or one of the Github GUI clients: [OSX](http://mac.github.com/), [Windows] (http://windows.github.com/), [Eclipse](http://eclipse.github.com/)
 
-        Clone this repo: $ git clone git@github.com:riverbed/flyscript-vm.git
+        Clone this repo: $ git clone https://github.com/riverbed/flyscript-vm-config.git
         Or, using one of the Github GUI clients, click the button: Clone in {platform}
 
 ## BASIC USAGE
