@@ -12,6 +12,7 @@ class setup {
 
     exec { "apt-upgrade":
       #command => "/usr/bin/sudo export DEBIAN_FRONTEND=noninteractive  && /usr/bin/sudo apt-get -y upgrade",
+      #command => '/usr/bin/sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" upgrade'
       command => '/usr/bin/sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade'
     }
 }
@@ -118,25 +119,26 @@ class flyscript_portal {
     }
 
     package {
-      "pandas":
-        ensure => "0.13.1",
-        provider => pip,
-        require => Package['python-pip'];
-    }
-
-    package {
       "numpy":
         ensure => "1.8.0",
         provider => pip,
         require => Package['python-pip'];
     }
 
-    #    package {
-    #      "sharepoint":
-    #        ensure => ">=0.3.2,<=0.4",
-    #        provider => pip,
-    #        require => Package['python-pip'];
-    #    }
+    package {
+      "pandas":
+        ensure => "0.13.1",
+        provider => pip,
+        require => Package['python-pip', 'pandas'];
+    }
+
+
+    package {
+      "sharepoint":
+        ensure => "0.3.2",
+        provider => pip,
+        require => Package['python-pip'];
+    }
     #
     #    package {
     #      "python-ntlm":
@@ -186,7 +188,7 @@ class flyscript_portal {
     exec {
       'portal_requirements':
         cwd => '/flyscript/flyscript_portal',
-        command => 'sudo pip install -r requirements.txt',
+        command => 'sudo pip install -b /tmp -r requirements.txt',
         path => '/flyscript/flyscript_portal:/usr/local/bin:/usr/bin:/bin',
         creates => '/flyscript/flyscript_portal/project/settings/active.py',
         notify => [ Exec['portal_setup'], 
